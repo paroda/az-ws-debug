@@ -55,6 +55,8 @@ To access the REPL this tool connects to the azure app service scm endpoint and 
 
 In the Azure Portal, in the *Overview* blade, click *Get publish profile*. This would download a *.PublishSettings* file. Note the *username* and *password* associated with the `MSDeploy` publishMethod.
 
+For convinience, you can use the function `az.ws-debug/parse-publish-settings` available with this tool to parse the *.publishSettings* file. It would return a map which you can pass directly to the `az.ws-debug/connect` function. [see](#Load-and-Connect)
+
 ## Install Clojure CLI
 
 Install it from the official site [Clojure.org](https://clojure.org/guides/getting_started "Getting started with Clojure CLI")
@@ -85,6 +87,8 @@ To connect call the function `az.ws-debug/connect`. It takes a map with 3 keys:
 * `:az-app-name`: the name of your azure webapp. for example, for the web app `https://my-app.azurewebsites.net` the app-name is `my-app`
 * `:user-name`: the username as obtained from the PublishSettings for `MSDeploy` publishMethod
 * `:password`: the password as obtained from the PublishSettings for `MSDeploy` publishMethod
+
+If you have the *.publishSettings* file ([see](#Gather-azure-web-application-connection-info)), then you can generate this map by calling `(az.ws-debug/parse-publish-settings "/path/to/your-app.publishSettings")`.
 
 Then call `az.ws-debug/repl` to access the remote *Socket REPL*
 

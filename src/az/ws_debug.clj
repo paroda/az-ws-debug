@@ -1,5 +1,6 @@
 (ns az.ws-debug
   (:require [clojure.string :as str]
+            [clojure.xml :as xml]
             [gniazdo.core :as ws]
             [taoensso.timbre :as log])
   (:import [java.util Base64]))
@@ -11,6 +12,16 @@
     (format "Basic %s"
             (-> (Base64/getEncoder)
                 (.encodeToString (.getBytes creds))))))
+
+(defn parse-publish-settings [file]
+  (->> (xml/parse file)
+       :content
+       (some #(if (and (= (:tag %) :publishProfile)
+                       (= (get-in % [:attrs :publishMethod]) "MSDeploy"))
+                (let [{:keys [attrs]} %]
+                  {:az-app-name (:msdeploySite attrs)
+                   :user-name (:userName attrs)
+                   :password (:userPWD attrs)})))))
 
 (defn- on-connect [session]
   (swap! state assoc :session session)
@@ -62,7 +73,7 @@
    (some-> @state :socket ws/close) ;; close previous
    (reset! state {}) ;; clean up
    ;; connect
-   (let [socket (-> (str "wss://" az-app-name
+   (let [socket (-> (str "wss://" (str/lower-case az-app-name)
                          ".scm.azurewebsites.net"
                          "/DebugSiteExtension/JavaDebugSiteExtension.ashx")
                     (ws/connect :headers {"Authorization" (encode-auth user-name password)}
