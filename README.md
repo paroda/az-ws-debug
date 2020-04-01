@@ -6,6 +6,23 @@ Clojure can be used to build web applications that can be deployed on Microsoft 
 
 A simple REPL can be started on a Clojure application just by one simple java option `-Dclojure.server.repl="{:port 9000 :accept clojure.core.server/repl}"`. With this, Clojure would automatically start a *Socket REPL* on port *9000*. The trick is to make this REPL accessible somehow on your local machine. That is the purpose of this tool.
 
+**You can connect it to your IDE using any *Socket REPL* based plugin.**
+
+## Index
+* [Prerequisites](#Prerequisites)
+* [Ensure 64bit and Enable web-sockets on your azure website](#Ensure-64bit-and-Enable-web-sockets-on-your-azure-website)
+* [Enable Socket REPL in web.config](#Enable-Socket-REPL-in-web.config)
+* [Gather azure web application connection info](#Gather-azure-web-application-connection-info)
+* [Install Clojure CLI](#Install-Clojure-CLI)
+* [Add a new alias for this tool to your global *deps.edn* file](#Add-a-new-alias-for-this-tool-to-your-global-deps.edn-file)
+* [Access the remote REPL](#Access-the-remote-REPL)
+> * [Load and connect](#Load-and-connect)
+>> * [Simple quick REPL on terminal](#Simple-quick-REPL-on-terminal)
+>> * [Integrate with IDE](#Integrate-with-IDE)
+* [How it works](#How-it-works)
+* [Limitation](#Limitation)
+* [CAUTION](#CAUTION)
+
 ## Prerequisites
 
 * Azure website with a Clojure (Java) Web Application.
@@ -13,7 +30,7 @@ A simple REPL can be started on a Clojure application just by one simple java op
 * Change bitness of your webapp to 64bit.
 * Install Clojure CLI
 
-## Ensure 64bit and Enable 'web sockets' on your azure website
+## Ensure 64bit and Enable web-sockets on your azure website
 
 ![enable websocket](./docs/images/websocket-enabled.png "")
 
@@ -63,6 +80,8 @@ Install it from the official site [Clojure.org](https://clojure.org/guides/getti
 
 ## Add a new alias for this tool to your global *deps.edn* file
 
+The global *deps.edn* file is usually located in `.clojure` folder in your `HOME` folder. Typically, on Linux it is `$HOME/.clojure/deps.edn` and on Windows `%USERPROFILE%\.clojure\deps.edn`.
+
 ```clojure
   :aliases {
      :az-ws-debug {:extra-deps {az.ws-debug {:git/url "https://github.com/paroda/az-ws-debug"
@@ -82,6 +101,8 @@ user=>
 
 ### Load and connect
 
+#### Simple quick REPL on terminal
+
 To connect call the function `az.ws-debug/connect`. It takes a map with 3 keys:
 
 * `:az-app-name`: the name of your azure webapp. for example, for the web app `https://my-app.azurewebsites.net` the app-name is `my-app`
@@ -92,17 +113,19 @@ If you have the *.publishSettings* file ([see](#Gather-azure-web-application-con
 
 Then call `az.ws-debug/repl` to access the remote *Socket REPL*
 
+*TIP*: you can directly pass the path of the *.publishSettings* file to `az.ws-debug/connect` too.
+
 ```text
 user=> (require '[az.ws-debug :as dbg])
 nil
 user=> (dbg/connect {:az-app-name "azure-app-name"
                      :user-name "user-name"
                      :password "password"})
-20-03-28 17:12:43 localhost.localdomain INFO [az.ws-debug:17] - session ready
-20-03-28 17:12:43 localhost.localdomain INFO [az.ws-debug:77] - session connected
+20-03-28 17:12:43 localhost INFO [az.ws-debug:17] - session ready
+20-03-28 17:12:43 localhost INFO [az.ws-debug:77] - session connected
 nil
 user=> (dbg/repl)
-20-03-28 17:13:56 localhost.localdomain INFO [az.ws-debug:45] - repl started
+20-03-28 17:13:56 localhost INFO [az.ws-debug:45] - repl started
 =>
 ```
 
@@ -122,7 +145,7 @@ To close the repl type `:repl/quit`
 
 ```text
 user=> :repl/quit
-20-03-28 17:32:53 localhost.localdomain INFO [az.ws-debug:53] - repl closed!
+20-03-28 17:32:53 localhost INFO [az.ws-debug:53] - repl closed!
 nil
 user=>
 ```
@@ -131,7 +154,43 @@ To disconnect the websocket type `(az.ws-debug/close)`
 
 ```text
 user=> (dbg/close)
-20-03-28 17:34:50 localhost.localdomain INFO [az.ws-debug:42] - session closed: 1006 Disconnected
+20-03-28 17:34:50 localhost INFO [az.ws-debug:42] - session closed: 1006 Disconnected
+nil
+user=>
+```
+
+#### Integrate with IDE
+
+There are quite a few options to connect to IDE with *Socket REPL* or *Unrepl* over it.
+
+* [Spiral](https://github.com/Unrepl/spiral) for Emacs
+* [Chlorine](https://atom.io/packages/chlorine) for Atom
+* [Clover](https://github.com/mauricioszabo/clover/) for VS Code
+
+And ther may be some more, I am just not aware of. If it supports *Socket REPL* then there is a good chance it will just work.
+
+Just as we did above, here too we first connect to Azure, but this time we would specify a local port so that the IDE plugin can connect to it. And this time we would just specify the path to the *.publishSettings* file instead of the map with azure app information. It will automatically parse this file and pickup the credentials for the *publishProfile* where *publishMethod* is `MSDeploy`.
+
+```text
+user=> (require '[az.ws-debug :as dbg])
+nil
+user=> (dbg/connect "path/to/my-app.publishsettings" 3000)
+20-04-01 15:14:31 localhost INFO [az.server:109] -
+Started Socket REPL server listening on  [127.0.0.1:3000]
+ Azure App Name: my-app
+ For quick access call  (az.server/repl "my-app")
+ Or you can connect from any Socket REPL based client.
+nil
+user=>
+```
+
+It shows that it has started a socket listening on the port we specified `3000`. Now from your IDE just connect to this port.
+
+To close the connection and stop listening on this port, type `(az.ws-debug/close "my-app")` where `my-app` is the name of Azure App Service (also shown in the output of `connect` as shown above).
+
+```text
+user=> (dbg/close "my-app")
+20-04-01 15:56:58 localhost INFO [az.server:107] - Stopped Socket REPL server: my-app
 nil
 user=>
 ```
@@ -144,9 +203,7 @@ Here, we utilize that websocket connection. To satisfy the initial handshake che
 
 ## Limitation
 
-This is meant for troubleshooting purpose, for which the simple text repl is quite adequate. It is not meant for integration to IDE as that would require more tooling support. Maybe implement the n-REPL through websocket. However, that would need some additional dependencies to be part of your deployment to Azure web site. And the goal of this tool is not to add any extra development libraries into the production environment. It is primarily meant for those edge case issues, which only occur on the Azure environment and not reproducible during local development.
-
-If adding the extra library is okay, then there are a few nice tools already. For example: [Drawbridge](https://github.com/nrepl/drawbridge)
+It currently tested with *Socket REPL*. However, in principle it should work with PREPL, though not tested yet. It may also be made to work with n-REPL. However, that would need adding extra dependency on server side. Hence that is not the focus here. However, *unrepl* is anohter option which just works over the *Socket REPL*. Thus any tooling based on *unrepl* works just fine.
 
 ## CAUTION
 

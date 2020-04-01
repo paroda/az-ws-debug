@@ -1,17 +1,12 @@
 (ns az.ws-debug
+  "Utility for Live-debugging Clojure web applications hosted on Azure App Services."
   (:require [clojure.string :as str]
             [clojure.xml :as xml]
-            [gniazdo.core :as ws]
-            [taoensso.timbre :as log])
-  (:import [java.util Base64]))
+            [taoensso.timbre :as log]
+            [az.basic :as bs]
+            [az.server :as srv]))
 
-(defonce state (atom {}))
-
-(defn encode-auth [user-name password]
-  (let [creds (format "%s:%s" user-name password)]
-    (format "Basic %s"
-            (-> (Base64/getEncoder)
-                (.encodeToString (.getBytes creds))))))
+(log/set-level! :info)
 
 (defn parse-publish-settings [file]
   (->> (xml/parse file)
@@ -23,76 +18,34 @@
                    :user-name (:userName attrs)
                    :password (:userPWD attrs)})))))
 
-(defn- on-connect [session]
-  (swap! state assoc :session session)
-  (log/info "session ready"))
-
-(defn- printout [txt]
-  (if (:jdwp-handshake-over? @state)
-    (do
-      (print txt)
-      (flush))
-    (if (str/index-of txt ":repl/jdwp-handshake-over")
-      (swap! state assoc :jdwp-handshake-over? true)
-      #_(log/debug "pre jdwp-handshake:" (pr-str txt)))))
-
-(defn- on-receive [msg]
-  (swap! state assoc :received msg)
-  (printout msg))
-
-(defn- on-binary [bytes offset length]
-  (swap! state assoc :binary [bytes offset length])
-  (printout (String. bytes offset length)))
-
-(defn- on-error [error]
-  (swap! state assoc :error error)
-  (log/error error "Socket error!"))
-
-(defn- on-close [status reason]
-  (swap! state dissoc :session :socket)
-  (log/info "session closed:" status reason))
-
-(defn repl []
-  (log/info "repl started")
-  (print "=> ")
-  (flush)
-  (loop []
-    (let [inp (read-line)
-          socket (:socket @state)]
-      (cond
-        (not socket) (log/warn "not connected!")
-        (= inp ":repl/quit") (log/info "repl closed!")
-        :else (do
-                (ws/send-msg socket (str inp "\n"))
-                (recur))))))
+(defn- get-az-info [azure-settings]
+  (let [az-info (if (map? azure-settings)
+                  azure-settings
+                  (parse-publish-settings azure-settings))]
+    (if (or (str/blank? (:az-app-name az-info))
+            (str/blank? (:user-name az-info))
+            (str/blank? (:password az-info)))
+      (log/error "Missing on or more of required info: az-app-name, user-name, password")
+      az-info)))
 
 (defn connect
-  ([{:keys [az-app-name user-name password]}]
-   (connect az-app-name user-name password)) 
-  ([az-app-name user-name password]
-   (some-> @state :socket ws/close) ;; close previous
-   (reset! state {}) ;; clean up
-   ;; connect
-   (let [socket (-> (str "wss://" (str/lower-case az-app-name)
-                         ".scm.azurewebsites.net"
-                         "/DebugSiteExtension/JavaDebugSiteExtension.ashx")
-                    (ws/connect :headers {"Authorization" (encode-auth user-name password)}
-                                :on-connect on-connect
-                                :on-receive on-receive
-                                :on-binary on-binary
-                                :on-error on-error
-                                :on-close on-close))]
-     (swap! state assoc :socket socket)
-     (ws/send-msg socket "JDWP-Handshake") ;; first packet to satisfy JDWP
-     (ws/send-msg socket "\n:repl/jdwp-handshake-over\n"))
-   (log/info "session connected")))
+  ([azure-settings]
+   (if-let [az-info (get-az-info azure-settings)]
+     (bs/connect az-info)))
+  ([azure-settings port]
+   (connect azure-settings nil port))
+  ([azure-settings host port]
+   (if-let [az-info (get-az-info azure-settings)]
+     (srv/start-server az-info host port))))
 
-(defn send-msg [msg]
-  (if-let [s (:socket @state)]
-    (ws/send-msg s msg)
-    (log/warn "not connected!")))
+(defn repl
+  ([] (bs/repl))
+  ([az-app-name] (srv/repl az-app-name)))
 
-(defn close []
-  (if-let [s (:socket @state)]
-    (ws/close s)
-    (log/warn "not connected!")))
+(defn close
+  ([] (bs/close))
+  ([az-app-name] (srv/stop-server az-app-name)))
+
+(defn close-all []
+  (bs/close)
+  (srv/stop-all-servers))
