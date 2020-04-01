@@ -11,10 +11,10 @@ A simple REPL can be started on a Clojure application just by one simple java op
 ## Index
 * [Prerequisites](#Prerequisites)
 * [Ensure 64bit and Enable web-sockets on your azure website](#Ensure-64bit-and-Enable-web-sockets-on-your-azure-website)
-* [Enable Socket REPL in web.config](#Enable-Socket-REPL-in-web.config)
+* [Enable Socket REPL in web.config](#Enable-Socket-REPL-in-webconfig)
 * [Gather azure web application connection info](#Gather-azure-web-application-connection-info)
 * [Install Clojure CLI](#Install-Clojure-CLI)
-* [Add a new alias for this tool to your global *deps.edn* file](#Add-a-new-alias-for-this-tool-to-your-global-deps.edn-file)
+* [Add a new alias for this tool to your global deps.edn file](#Add-a-new-alias-for-this-tool-to-your-global-depsedn-file)
 * [Access the remote REPL](#Access-the-remote-REPL)
 > * [Load and connect](#Load-and-connect)
 >> * [Simple quick REPL on terminal](#Simple-quick-REPL-on-terminal)
@@ -78,7 +78,7 @@ For convinience, you can use the function `az.ws-debug/parse-publish-settings` a
 
 Install it from the official site [Clojure.org](https://clojure.org/guides/getting_started "Getting started with Clojure CLI")
 
-## Add a new alias for this tool to your global *deps.edn* file
+## Add a new alias for this tool to your global deps.edn file
 
 The global *deps.edn* file is usually located in `.clojure` folder in your `HOME` folder. Typically, on Linux it is `$HOME/.clojure/deps.edn` and on Windows `%USERPROFILE%\.clojure\deps.edn`.
 
