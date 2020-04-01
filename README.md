@@ -178,7 +178,7 @@ user=> (dbg/connect "path/to/my-app.publishsettings" 3000)
 20-04-01 15:14:31 localhost INFO [az.server:109] -
 Started Socket REPL server listening on  [127.0.0.1:3000]
  Azure App Name: my-app
- For quick access call  (az.server/repl "my-app")
+ For quick access call  (az.ws-debug/repl "my-app")
  Or you can connect from any Socket REPL based client.
 nil
 user=>
