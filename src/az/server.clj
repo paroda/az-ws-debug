@@ -108,7 +108,7 @@
              ;; socket REPL server ready
              (log/info "\nStarted Socket REPL server listening on " (format "[%s:%s]" host port)
                        "\n Azure App Name:" az-app-name
-                       "\n For quick access call " (format "(az.server/repl \"%s\")" az-app-name)
+                       "\n For quick access call " (format "(az.ws-debug/repl \"%s\")" az-app-name)
                        "\n Or you can connect from any Socket REPL based client."))
            ;; close terminal repl session if unable to start server
            (catch Exception _

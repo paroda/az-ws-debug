@@ -85,7 +85,7 @@ The global *deps.edn* file is usually located in `.clojure` folder in your `HOME
 ```clojure
   :aliases {
      :az-ws-debug {:extra-deps {az.ws-debug {:git/url "https://github.com/paroda/az-ws-debug"
-                                             :sha "01977cebbbd200672fe1443ceb88f79a1b304f90"}}}
+                                             :sha "075876a5106d5bf73c1dee7e8ae20342437010c7"}}}
   }
 ```
 
